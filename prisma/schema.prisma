@@ -1,0 +1,161 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  EMPLOYEE
+  ADMIN
+}
+
+enum Language {
+  EN_GB // English (UK)
+  PT_BR // Portuguese (Brazil))
+}
+
+model Agency {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  email     String   @unique
+  postcode  String
+  address   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+
+  @@map("agencies")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String
+  password      String
+  phone         String?
+  postcode      String?
+  address       String?
+  language      Language       @default(EN_GB)
+  role          Role           @default(CUSTOMER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+  resetTokens   ResetToken[]
+  bookings      Booking[] // 👈 ADD
+  agencyId      String?        @map("agency_id")
+  agency        Agency?        @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  hashedToken String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("refresh_tokens")
+}
+
+model ResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("reset_tokens")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  services    Service[]
+
+  @@map("categories")
+}
+
+model Service {
+  id               String        @id @default(uuid())
+  name             String
+  slug             String        @unique
+  description      String
+  shortDescription String?       @map("short_description")
+  imageUrl         String        @map("image_url")
+  categoryId       String        @map("category_id")
+  category         Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  order            Int           @default(0)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  bookingItems     BookingItem[] // 👈 ADD
+
+  @@map("services")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Booking {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        BookingStatus  @default(PENDING)
+  notes         String? // Observações gerais
+  executionDate String?        @map("execution_date") // 👈 
+  postcode      String? // 👈 
+  address       String? // 👈 MUDOU
+  totalItems    Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  items         BookingItem[]
+  photos        BookingPhoto[]
+
+  @@map("bookings")
+}
+
+model BookingItem {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id])
+  notes     String? // Configurações específicas deste serviço
+  createdAt DateTime @default(now())
+
+  @@map("booking_items")
+}
+
+model BookingPhoto {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  filename  String
+  url       String
+  createdAt DateTime @default(now())
+
+  @@map("booking_photos")
+}

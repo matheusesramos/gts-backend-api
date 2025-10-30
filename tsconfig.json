@@ -1,0 +1,18 @@
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./", // 👈 Mudar de "./src" para "./"
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*", "prisma/seed.ts"], // 👈 Adicionar prisma/seed.ts
+  "exclude": ["node_modules", "dist"]
+}
