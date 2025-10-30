@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*", "prisma/seed.ts"], // 👈 Adicionar prisma/seed.ts
+  "include": ["src/**/*", "prisma/seed.ts", "public/**/*"], // 👈 Adicionar prisma/seed.ts
   "exclude": ["node_modules", "dist"]
 }

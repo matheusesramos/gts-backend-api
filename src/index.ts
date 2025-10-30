@@ -26,7 +26,7 @@ app.use(
 );
 
 // Servir arquivos estáticos da pasta public
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(process.cwd(), "../public")));
 
 // Rate limiter APENAS em produção
 if (env.NODE_ENV === "production") {
@@ -54,7 +54,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/reset-password", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/reset-password.html"));
+  res.sendFile(path.join(process.cwd(), "../public/reset-password.html"));
 });
 
 app.listen(PORT, () => {

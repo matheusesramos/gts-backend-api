@@ -6,7 +6,7 @@ import crypto from "crypto";
 // Configuração de armazenamento
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../../public/images/bookings"));
+    cb(null, path.join(process.cwd(), "../../public/images/bookings"));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${crypto
