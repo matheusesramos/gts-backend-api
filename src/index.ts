@@ -14,6 +14,9 @@ import cors from "cors";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Confiar no proxy (necessário para Railway/proxies reversos)
+app.set("trust proxy", true);
+
 // Middleware para parsear JSON
 app.use(express.json());
 app.use(cookieParser());
