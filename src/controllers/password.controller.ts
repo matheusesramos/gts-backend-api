@@ -1,13 +1,11 @@
 // src/controllers/password.controller.ts
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
 import { emailService } from "../services/email.service";
 import { env } from "../config/env";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 // Schema de validação
 const forgotPasswordSchema = z.object({

@@ -1,13 +1,11 @@
 // src/controllers/agencies.controller.ts
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import {
   createAgencySchema,
   updateAgencySchema,
 } from "../schemas/agency.schemas";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 // Criar nova agência (apenas ADMIN)
 export const createAgency = async (req: AuthRequest, res: Response) => {

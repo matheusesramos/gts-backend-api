@@ -1,6 +1,5 @@
 // src/controllers/auth.controller.ts
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { registerUserSchema, loginUserSchema } from "../schemas/user.schemas";
@@ -10,8 +9,7 @@ import {
   hashToken,
 } from "../utils/token.utils";
 import { env } from "../config/env";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export const register = async (req: Request, res: Response) => {
   const validation = registerUserSchema.safeParse(req.body);

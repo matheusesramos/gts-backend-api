@@ -1,10 +1,8 @@
 // src/controllers/profile.controller.ts
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Response } from "express";
 import { updateProfileSchema } from "../schemas/user.schemas";
 import { AuthRequest } from "../middlewares/auth.middleware";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;

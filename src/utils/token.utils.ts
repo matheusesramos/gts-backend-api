@@ -1,10 +1,9 @@
 // src/utils/token.utils.ts
 import jwt, { SignOptions } from "jsonwebtoken"; // Importe SignOptions
-import { PrismaClient, User } from "@prisma/client";
+import { User } from "@prisma/client";
 import crypto from "crypto";
 import { env } from "../config/env";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 export function generateTokens(user: User) {
   const payload = { userId: user.id, role: user.role };
