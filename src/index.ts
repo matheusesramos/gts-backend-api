@@ -15,7 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Confiar no proxy (necessário para Railway/proxies reversos)
-app.set("trust proxy", true);
+// Railway usa 1 proxy reverso, então configuramos para confiar apenas no primeiro proxy
+app.set("trust proxy", 1);
 
 // Middleware para parsear JSON
 app.use(express.json());
@@ -39,6 +40,11 @@ if (env.NODE_ENV === "production") {
     standardHeaders: true,
     legacyHeaders: false,
     message: "Muitas requisições deste IP, tente novamente em 15 minutos.",
+    // Desabilitar validação de trust proxy em produção quando sabemos que estamos atrás de um proxy confiável (Railway)
+    validate: {
+      trustProxy: false,
+      xForwardedForHeader: false,
+    },
   });
   app.use(limiter);
 } else {
