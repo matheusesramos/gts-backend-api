@@ -10,6 +10,9 @@ import agenciesRoutes from "./routes/agencies.routes";
 import { env } from "./config/env";
 import path from "path";
 import cors from "cors";
+import helmet from "helmet";
+import { notFoundHandler, errorHandler } from "./middlewares/error.middleware";
+import { prisma } from "./lib/prisma";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,12 +25,16 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-  })
-);
+const allowedOrigins = [env.FRONTEND_URL];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // mobile RN/server-to-server
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("CORS: origin não permitido"));
+  },
+  credentials: true, // só se usar cookies na web
+}));
 
 // Servir arquivos estáticos
 const publicPath = path.join(process.cwd(), "public");
@@ -53,22 +60,51 @@ if (env.NODE_ENV === "production") {
   console.log("⚠️  Rate limiting DISABLED (development mode)");
 }
 
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
 // Rotas da API
 app.use("/api/auth", authRoutes);
 app.use("/api", servicesRoutes);
 app.use("/api", bookingsRoutes);
 app.use("/api", agenciesRoutes);
 
-app.get("/api/health", (req, res) => {
-  console.log("🏥 Health check recebido");
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", db: "up", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: "degraded", db: "down" });
+  }
 });
 
 app.get("/reset-password", (req, res) => {
   res.sendFile(path.join(process.cwd(), "../public/reset-password.html"));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${env.NODE_ENV}`);
 });
+
+async function gracefulShutdown(reason?: unknown) {
+  console.error("Shutting down gracefully...", reason);
+  server.close(async () => {
+    try {
+      await prisma.$disconnect();
+    } finally {
+      process.exit(1);
+    }
+  });
+  // Fallback: se não fechar em 10s, força saída
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
+process.on("unhandledRejection", gracefulShutdown);
+process.on("uncaughtException", gracefulShutdown);
