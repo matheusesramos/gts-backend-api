@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && cp -r public dist/",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
+    "build": "npx prisma generate && mkdir -p public && cp -r public /tmp/public || true",
     "seed": "npx prisma db seed"
   },
   "engines": {

@@ -9,10 +9,9 @@ export function getServiceImageUrl(filename: string | null): string {
     return "https://via.placeholder.com/400x300/4FB3D9/FFFFFF?text=Service";
   }
 
-  const baseUrl = env.NODE_ENV === "production"
-    ? process.env.RAILWAY_PUBLIC_DOMAIN 
-      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-      : process.env.API_BASE_URL || `http://localhost:${env.PORT}`
+  // Detecta Railway automaticamente
+  const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
     : process.env.API_BASE_URL || `http://localhost:${env.PORT}`;
 
   return `${baseUrl}/images/services/${filename}`;
