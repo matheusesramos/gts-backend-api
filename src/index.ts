@@ -30,7 +30,13 @@ app.use(
 );
 
 // Servir arquivos estáticos da pasta public
-app.use(express.static(path.join(process.cwd(), "../public")));
+// Servir arquivos estáticos
+const publicPath = env.NODE_ENV === "production" 
+  ? path.join(__dirname, "../public")
+  : path.join(process.cwd(), "public");
+
+console.log(`📁 Serving static files from: ${publicPath}`);
+app.use(express.static(publicPath));
 
 // Rate limiter APENAS em produção
 if (env.NODE_ENV === "production") {
