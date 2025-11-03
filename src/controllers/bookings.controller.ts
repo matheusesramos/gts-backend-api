@@ -1,10 +1,9 @@
 // src/controllers/bookings.controller.ts
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { uploadBookingPhoto } from "../services/storage.service";
+import { prisma } from "../lib/prisma";
 
-const prisma = new PrismaClient();
 
 export const createBooking = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
