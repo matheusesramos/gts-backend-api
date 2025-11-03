@@ -1,8 +1,10 @@
 // src/controllers/bookings.controller.ts
-import { Response } from "express";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { env } from "../config/env";
-import { prisma } from "../lib/prisma";
+import { uploadBookingPhoto } from "../services/storage.service";
+
+const prisma = new PrismaClient();
 
 export const createBooking = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
@@ -19,7 +21,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
   let address: string | undefined;
   let notes: string | undefined;
 
-  // Se veio como FormData (com fotos)
+  // Parse dos dados (mantém igual)
   if (
     req.body.items &&
     typeof req.body.items === "object" &&
@@ -33,14 +35,11 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       notes: itemsObj[index].notes || null,
     }));
 
-    // Extrair campos adicionais
     executionDate = req.body.executionDate;
     postcode = req.body.postcode;
     address = req.body.address;
     notes = req.body.notes;
-  }
-  // Se veio como JSON (sem fotos)
-  else if (Array.isArray(req.body.items)) {
+  } else if (Array.isArray(req.body.items)) {
     items = req.body.items;
     executionDate = req.body.executionDate;
     postcode = req.body.postcode;
@@ -61,6 +60,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
   console.log("📸 Photos received:", files?.length || 0);
 
   try {
+    // Criar booking
     const booking = await prisma.booking.create({
       data: {
         userId,
@@ -78,28 +78,31 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Upload de fotos (se houver)
+    // Upload de fotos para Supabase
     if (files && files.length > 0) {
-      const baseUrl =
-        env.NODE_ENV === "production"
-          ? process.env.PRODUCTION_URL || "https://api.gts.com"
-          : process.env.API_BASE_URL || `http://localhost:${env.PORT}`;
+      console.log(`📤 Uploading ${files.length} photos to Supabase...`);
 
-      const photoRecords = files.map((file) => ({
+      const uploadPromises = files.map((file) =>
+        uploadBookingPhoto(file, booking.id)
+      );
+
+      const photoUrls = await Promise.all(uploadPromises);
+
+      // Salvar URLs no banco
+      const photoRecords = photoUrls.map((url, index) => ({
         bookingId: booking.id,
-        filename: file.filename,
-        url: `${baseUrl}/images/bookings/${file.filename}`,
+        filename: files[index].originalname,
+        url: url,
       }));
 
       await prisma.bookingPhoto.createMany({
         data: photoRecords,
       });
 
-      console.log(
-        `✅ ${files.length} photos uploaded for booking ${booking.id}`
-      );
+      console.log(`✅ ${files.length} photos uploaded successfully`);
     }
 
+    // Buscar booking completo
     const completeBooking = await prisma.booking.findUnique({
       where: { id: booking.id },
       include: {
@@ -172,7 +175,7 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
     const booking = await prisma.booking.findFirst({
       where: {
         id,
-        userId, // Garantir que o usuário só veja seus próprios bookings
+        userId,
       },
       include: {
         items: {

@@ -1,21 +1,8 @@
-// src/middlewares/update.middleware.ts
+// src/middlewares/upload.middleware.ts
 import multer from "multer";
-import path from "path";
-import crypto from "crypto";
 
-// Configuração de armazenamento
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(process.cwd(), "../../public/images/bookings"));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${crypto
-      .randomBytes(6)
-      .toString("hex")}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `booking-${uniqueSuffix}${ext}`);
-  },
-});
+// Usar memoryStorage ao invés de diskStorage
+const storage = multer.memoryStorage();
 
 // Filtro de tipos de arquivo
 const fileFilter = (req: any, file: any, cb: any) => {

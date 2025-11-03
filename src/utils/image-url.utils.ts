@@ -1,20 +1,15 @@
 // src/utils/image-url.utils.ts
-import { env } from "../config/env";
+import { getServiceImageUrl as getSupabaseImageUrl } from "../services/storage.service";
 
 /**
- * Gera URL completa para imagem de serviço
+ * Gera URL completa para imagem de serviço do Supabase
  */
 export function getServiceImageUrl(filename: string | null): string {
   if (!filename) {
     return "https://via.placeholder.com/400x300/4FB3D9/FFFFFF?text=Service";
   }
 
-  // Detecta Railway automaticamente
-  const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-    : process.env.API_BASE_URL || `http://localhost:${env.PORT}`;
-
-  return `${baseUrl}/images/services/${filename}`;
+  return getSupabaseImageUrl(filename);
 }
 
 /**
