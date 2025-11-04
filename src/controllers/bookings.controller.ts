@@ -2,8 +2,8 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { uploadBookingPhoto } from "../services/storage.service";
+import { bookingEmailService } from "../services/booking-email.service"; // 👈 ADD
 import { prisma } from "../lib/prisma";
-
 
 export const createBooking = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.userId;
@@ -77,6 +77,8 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    let photoUrls: string[] = [];
+
     // Upload de fotos para Supabase
     if (files && files.length > 0) {
       console.log(`📤 Uploading ${files.length} photos to Supabase...`);
@@ -85,7 +87,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
         uploadBookingPhoto(file, booking.id)
       );
 
-      const photoUrls = await Promise.all(uploadPromises);
+      photoUrls = await Promise.all(uploadPromises);
 
       // Salvar URLs no banco
       const photoRecords = photoUrls.map((url, index) => ({
@@ -105,6 +107,13 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     const completeBooking = await prisma.booking.findUnique({
       where: { id: booking.id },
       include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
         items: {
           include: {
             service: {
@@ -119,6 +128,35 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     });
 
     console.log("✅ Booking created:", booking.id);
+
+    // 👇 ADD: Enviar email de notificação
+    try {
+      console.log("📧 Sending booking notification email...");
+
+      await bookingEmailService.sendNewBookingNotification({
+        bookingId: booking.id,
+        customerName: completeBooking!.user.name,
+        customerEmail: completeBooking!.user.email,
+        customerPhone: completeBooking!.user.phone,
+        executionDate: completeBooking!.executionDate,
+        postcode: completeBooking!.postcode,
+        address: completeBooking!.address,
+        notes: completeBooking!.notes,
+        services: completeBooking!.items.map((item) => ({
+          name: item.service.name,
+          category: item.service.category.name,
+          notes: item.notes,
+        })),
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+        createdAt: booking.createdAt.toISOString(),
+      });
+
+      console.log("✅ Booking notification email sent successfully");
+    } catch (emailError) {
+      // Não falha o booking se o email não enviar
+      console.error("⚠️ Failed to send booking email:", emailError);
+      // Continua normalmente - o booking foi criado com sucesso
+    }
 
     return res.status(201).json({
       message: "Booking created successfully!",

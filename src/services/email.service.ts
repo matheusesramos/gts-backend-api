@@ -1,19 +1,34 @@
 // src/services/email.service.ts
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { env } from "../config/env";
 
-const resend = new Resend(env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  secure: env.SMTP_PORT === 465,
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+  },
+});
+
+transporter.verify((error) => {
+  if (error) {
+    console.error("❌ SMTP connection failed:", error);
+  } else {
+    console.log("✅ SMTP server ready");
+  }
+});
 
 export const emailService = {
   async sendPasswordResetEmail(email: string, name: string, token: string) {
-    // URL da página web
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
 
     try {
-      const { data, error } = await resend.emails.send({
-        from: env.EMAIL_FROM,
+      await transporter.sendMail({
+        from: `"GTS Customer" <${env.EMAIL_FROM}>`,
         to: email,
-        subject: "Password Recovery - GTS Customer",
+        subject: "🔐 Password Recovery",
         html: `
           <!DOCTYPE html>
           <html>
@@ -22,74 +37,112 @@ export const emailService = {
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>Password Recovery</title>
             </head>
-            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+            <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #f4f4f4;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 40px 20px;">
                 <tr>
                   <td align="center">
-                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                      <!-- Header -->
+                    <!-- Container Principal -->
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                      
+                      <!-- Header com logo/nome -->
                       <tr>
-                        <td style="background: linear-gradient(135deg, #4FB3D9 0%, #3A8CAF 100%); padding: 40px 20px; text-align: center;">
-                          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">GTS Customer</h1>
+                        <td style="background-color: #29abe2; padding: 32px 40px; text-align: left;">
+                          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Gentle Touch Star - Customer APP</h1>
                         </td>
                       </tr>
                       
-                      <!-- Content -->
+                      <!-- Título Principal -->
                       <tr>
-                        <td style="padding: 40px 30px;">
-                          <h2 style="color: #1a1a1a; margin-top: 0; font-size: 24px; font-weight: 600;">Hello, ${name}! 👋</h2>
-                          <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                            You requested to reset your password.
+                        <td style="padding: 40px 40px 24px 40px;">
+                          <h2 style="color: #1a1a1a; margin: 0; font-size: 22px; font-weight: 600; line-height: 1.3;">
+                            Password recovery request
+                          </h2>
+                        </td>
+                      </tr>
+                      
+                      <!-- Saudação -->
+                      <tr>
+                        <td style="padding: 0 40px 32px 40px;">
+                          <p style="color: #333333; margin: 0; font-size: 16px; line-height: 1.5;">
+                            Hi ${name},
                           </p>
-                          <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                            Click the button below to reset your password:
+                          <p style="color: #333333; margin: 16px 0 0 0; font-size: 16px; line-height: 1.5;">
+                            We received a request to reset your password. Click the button below to create a new password.
                           </p>
-                          
-                          <!-- Button -->
-                          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                        </td>
+                      </tr>
+                      
+                      <!-- Botão de Reset -->
+                      <tr>
+                        <td style="padding: 0 40px 32px 40px;">
+                          <table width="100%" cellpadding="0" cellspacing="0">
                             <tr>
                               <td align="center">
                                 <a href="${resetUrl}" 
-                                   style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #4FB3D9 0%, #3A8CAF 100%); color: #ffffff; text-decoration: none; border-radius: 10px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(79, 179, 217, 0.3);">
+                                   style="display: inline-block; padding: 16px 48px; background-color: #29abe2; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: 600;">
                                   Reset Password
                                 </a>
                               </td>
                             </tr>
                           </table>
-                          
-                          <div style="background-color: #f7fafc; border-left: 4px solid #4FB3D9; padding: 16px; margin: 30px 0; border-radius: 4px;">
-                            <p style="color: #2d3748; font-size: 14px; margin: 0; line-height: 1.5;">
-                              <strong>Can't click the button?</strong><br>
+                        </td>
+                      </tr>
+                      
+                      <!-- Box com link alternativo -->
+                      <tr>
+                        <td style="padding: 0 40px 32px 40px;">
+                          <div style="background-color: #f8f8f8; padding: 20px; border-radius: 4px;">
+                            <p style="color: #6b6b6b; font-size: 14px; margin: 0 0 8px 0; line-height: 1.5;">
+                              <strong>Button not working?</strong>
+                            </p>
+                            <p style="color: #333333; font-size: 13px; margin: 0; line-height: 1.5; word-break: break-all;">
                               Copy and paste this link into your browser:
                             </p>
-                            <p style="color: #4FB3D9; font-size: 13px; word-break: break-all; margin: 8px 0 0 0; font-family: monospace;">
+                            <p style="color: #29abe2; font-size: 13px; word-break: break-all; margin: 8px 0 0 0; font-family: monospace;">
                               ${resetUrl}
                             </p>
                           </div>
-                          
-                          <div style="background-color: #fff5f5; border-left: 4px solid #fc8181; padding: 16px; margin: 20px 0; border-radius: 4px;">
-                            <p style="color: #742a2a; font-size: 14px; margin: 0; line-height: 1.5;">
-                              <strong>⏱️ This link expires in 1 hour.</strong>
+                        </td>
+                      </tr>
+                      
+                      <!-- Aviso de expiração -->
+                      <tr>
+                        <td style="padding: 0 40px 32px 40px;">
+                          <div style="background-color: #fffbeb; padding: 20px; border-radius: 4px; border-left: 3px solid #f59e0b;">
+                            <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.6;">
+                              <strong>⏱️ This link expires in 1 hour.</strong> For security reasons, you'll need to request a new link after that.
                             </p>
                           </div>
-                          
-                          <p style="color: #718096; font-size: 14px; line-height: 1.6; margin: 20px 0;">
-                            If you didn't request this, you can safely ignore this email.
+                        </td>
+                      </tr>
+                      
+                      <!-- Mensagem de segurança -->
+                      <tr>
+                        <td style="padding: 0 40px 40px 40px;">
+                          <p style="color: #6b6b6b; font-size: 14px; line-height: 1.6; margin: 0;">
+                            If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
                           </p>
                         </td>
                       </tr>
                       
                       <!-- Footer -->
                       <tr>
-                        <td style="background-color: #f7fafc; padding: 24px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                          <p style="color: #a0aec0; font-size: 12px; margin: 0; line-height: 1.5;">
-                            © 2024 GTS Customer. All rights reserved.
-                          </p>
-                          <p style="color: #cbd5e0; font-size: 11px; margin: 8px 0 0 0;">
-                            This is an automated email, please do not reply.
-                          </p>
+                        <td style="background-color: #f8f8f8; padding: 24px 40px; border-top: 1px solid #e0e0e0;">
+                          <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="text-align: center;">
+                                <p style="color: #999999; margin: 0; font-size: 12px; line-height: 1.5;">
+                                  © ${new Date().getFullYear()} Gentle Touch Star. All rights reserved.
+                                </p>
+                                <p style="color: #cccccc; margin: 8px 0 0 0; font-size: 11px;">
+                                  This is an automated notification email.
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
+                      
                     </table>
                   </td>
                 </tr>
@@ -99,16 +152,10 @@ export const emailService = {
         `,
       });
 
-      if (error) {
-        console.error("Error sending email:", error);
-        throw new Error("Failed to send email");
-      }
-
       console.log("✅ Email sent successfully");
-      return data;
     } catch (error) {
-      console.error("Error in email service:", error);
-      throw error;
+      console.error("Error sending email:", error);
+      throw new Error("Failed to send email");
     }
   },
 };

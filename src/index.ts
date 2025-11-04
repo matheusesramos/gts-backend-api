@@ -27,19 +27,16 @@ app.use(cookieParser());
 
 const allowedOrigins = [env.FRONTEND_URL];
 
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // mobile RN/server-to-server
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("CORS: origin não permitido"));
-  },
-  credentials: true, // só se usar cookies na web
-}));
-
-// Servir arquivos estáticos
-const publicPath = path.join(process.cwd(), "public");
-console.log(`📁 Serving static files from: ${publicPath}`);
-app.use(express.static(publicPath));
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // mobile RN/server-to-server
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("CORS: origin não permitido"));
+    },
+    credentials: true, // só se usar cookies na web
+  })
+);
 
 // Rate limiter APENAS em produção
 if (env.NODE_ENV === "production") {
@@ -60,19 +57,19 @@ if (env.NODE_ENV === "production") {
   console.log("⚠️  Rate limiting DISABLED (development mode)");
 }
 
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
-// Rotas da API
+// Rotas da API - DEVEM VIR ANTES DO express.static
 app.use("/api/auth", authRoutes);
 app.use("/api", servicesRoutes);
 app.use("/api", bookingsRoutes);
 app.use("/api", agenciesRoutes);
 
-app.use(notFoundHandler);
-app.use(errorHandler);
-
+// Health check
 app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -82,13 +79,31 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
+// Rota para página de reset de senha
 app.get("/reset-password", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "../public/reset-password.html"));
+  const filePath = path.join(process.cwd(), "public", "reset-password.html");
+  console.log("📄 Serving reset-password from:", filePath);
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error("❌ Error serving reset-password.html:", err);
+      res.status(404).send("Reset password page not found");
+    }
+  });
 });
+
+// Servir arquivos estáticos - DEPOIS das rotas específicas
+const publicPath = path.join(process.cwd(), "public");
+console.log(`📁 Serving static files from: ${publicPath}`);
+app.use(express.static(publicPath));
+
+// Handlers de erro devem ser os últimos
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${env.NODE_ENV}`);
+  console.log(`📍 Environment: ${env.NODE_ENV}`);
 });
 
 async function gracefulShutdown(reason?: unknown) {
