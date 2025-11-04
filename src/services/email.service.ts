@@ -6,11 +6,12 @@ import { logger } from "../config/logger"; // 🆕 NOVO
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
-  secure: env.SMTP_PORT === 465,
+  secure: false,
   auth: {
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
   },
+  requireTLS: true,
 });
 
 transporter.verify((error) => {
