@@ -2,7 +2,8 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { uploadBookingPhoto } from "../services/storage.service";
-import { bookingEmailService } from "../services/booking-email.service"; // 👈 ADD
+import { bookingEmailService } from "../services/booking-email.service";
+import { logger } from "../config/logger";
 import { prisma } from "../lib/prisma";
 
 export const createBooking = async (req: AuthRequest, res: Response) => {
@@ -52,12 +53,6 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ message: "Items are required." });
   }
 
-  console.log("📦 Processing booking with items:", items.length);
-  console.log("📅 Execution date:", executionDate);
-  console.log("📍 Address:", postcode, address);
-  console.log("📝 Notes:", notes);
-  console.log("📸 Photos received:", files?.length || 0);
-
   try {
     // Criar booking
     const booking = await prisma.booking.create({
@@ -81,7 +76,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
     // Upload de fotos para Supabase
     if (files && files.length > 0) {
-      console.log(`📤 Uploading ${files.length} photos to Supabase...`);
+      logger.info(`Uploading ${files.length} photos for booking ${booking.id}`);
 
       const uploadPromises = files.map((file) =>
         uploadBookingPhoto(file, booking.id)
@@ -100,7 +95,9 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
         data: photoRecords,
       });
 
-      console.log(`✅ ${files.length} photos uploaded successfully`);
+      logger.debug(
+        `${files.length} photos uploaded successfully for booking ${booking.id}`
+      );
     }
 
     // Buscar booking completo
@@ -127,12 +124,10 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    console.log("✅ Booking created:", booking.id);
+    logger.info(`Booking created: ${booking.id} for user ${userId}`);
 
-    // 👇 ADD: Enviar email de notificação
+    // Enviar email de notificação
     try {
-      console.log("📧 Sending booking notification email...");
-
       await bookingEmailService.sendNewBookingNotification({
         bookingId: booking.id,
         customerName: completeBooking!.user.name,
@@ -150,12 +145,11 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         createdAt: booking.createdAt.toISOString(),
       });
-
-      console.log("✅ Booking notification email sent successfully");
     } catch (emailError) {
       // Não falha o booking se o email não enviar
-      console.error("⚠️ Failed to send booking email:", emailError);
-      // Continua normalmente - o booking foi criado com sucesso
+      logger.warn(
+        `Failed to send booking email for ${booking.id}: ${emailError}`
+      );
     }
 
     return res.status(201).json({
@@ -163,7 +157,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       booking: completeBooking,
     });
   } catch (error) {
-    console.error("❌ Error creating booking:", error);
+    logger.error(`Error creating booking: ${error}`);
     return res.status(500).json({ message: "Error creating booking." });
   }
 };
@@ -195,7 +189,7 @@ export const getUserBookings = async (req: AuthRequest, res: Response) => {
 
     return res.status(200).json({ bookings });
   } catch (error) {
-    console.error("Error fetching bookings:", error);
+    logger.error(`Error fetching bookings for user ${userId}: ${error}`);
     return res.status(500).json({ message: "Error fetching bookings." });
   }
 };
@@ -234,7 +228,7 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
 
     return res.status(200).json({ booking });
   } catch (error) {
-    console.error("Error fetching booking:", error);
+    logger.error(`Error fetching booking ${id}: ${error}`);
     return res.status(500).json({ message: "Error fetching booking." });
   }
 };

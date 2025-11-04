@@ -9,6 +9,7 @@ import {
   hashToken,
 } from "../utils/token.utils";
 import { env } from "../config/env";
+import { logger } from "../config/logger";
 import { prisma } from "../lib/prisma";
 
 export const register = async (req: Request, res: Response) => {
@@ -55,41 +56,32 @@ export const register = async (req: Request, res: Response) => {
       user: userWithoutPassword,
     });
   } catch (error) {
-    console.error("Erro no registro:", error);
+    logger.error(`Registration error: ${error}`);
     return res.status(500).json({ message: "Erro interno no servidor." });
   }
 };
 
 export const login = async (req: Request, res: Response) => {
-  console.log("📥 Login request recebido:", { email: req.body.email });
-
   const validation = loginUserSchema.safeParse(req.body);
   if (!validation.success) {
-    console.log("❌ Validação falhou:", validation.error.issues);
     return res.status(400).json({ errors: validation.error.issues });
   }
   const { email, password } = validation.data;
 
   try {
-    console.log("🔍 Buscando usuário:", email);
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      console.log("❌ Usuário não encontrado");
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
 
-    console.log("🔐 Verificando senha...");
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      console.log("❌ Senha incorreta");
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
 
-    console.log("🎟️ Gerando tokens...");
     const { accessToken, refreshToken } = generateTokens(user);
     await addRefreshTokenToDatabase(user.id, refreshToken);
 
-    console.log("🍪 Configurando cookie...");
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -97,10 +89,10 @@ export const login = async (req: Request, res: Response) => {
       maxAge: env.REFRESH_TOKEN_EXPIRATION * 1000,
     });
 
-    console.log("✅ Login bem-sucedido para:", email);
+    logger.info(`User logged in: ${email}`);
     return res.status(200).json({ accessToken });
   } catch (error) {
-    console.error("💥 Erro no login:", error);
+    logger.error(`Login error: ${error}`);
     return res.status(500).json({ message: "Erro interno no servidor." });
   }
 };

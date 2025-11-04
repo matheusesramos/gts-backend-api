@@ -1,6 +1,7 @@
 // src/services/email.service.ts
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
+import { logger } from "../config/logger"; // 🆕 NOVO
 
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
@@ -14,15 +15,15 @@ const transporter = nodemailer.createTransport({
 
 transporter.verify((error) => {
   if (error) {
-    console.error("❌ SMTP connection failed:", error);
+    logger.error(`SMTP connection failed: ${error.message}`); // 🔄 ALTERADO - era console.error
   } else {
-    console.log("✅ SMTP server ready");
+    logger.info("SMTP server ready"); // 🔄 ALTERADO - era console.log
   }
 });
 
 export const emailService = {
   async sendPasswordResetEmail(email: string, name: string, token: string) {
-    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+    const resetUrl = `${env.API_BASE_URL}/reset-password?token=${token}`; // 🔄 ALTERADO - usa API_BASE_URL
 
     try {
       await transporter.sendMail({
@@ -152,9 +153,9 @@ export const emailService = {
         `,
       });
 
-      console.log("✅ Email sent successfully");
+      logger.info(`Password reset email sent to: ${email}`); // 🔄 ALTERADO - era console.log
     } catch (error) {
-      console.error("Error sending email:", error);
+      logger.error(`Failed to send password reset email: ${error}`); // 🔄 ALTERADO - era console.error
       throw new Error("Failed to send email");
     }
   },

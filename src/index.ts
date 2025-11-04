@@ -3,11 +3,13 @@ import express from "express";
 import "dotenv/config";
 import { rateLimit } from "express-rate-limit";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
 import authRoutes from "./routes/auth.routes";
 import servicesRoutes from "./routes/services.routes";
 import bookingsRoutes from "./routes/bookings.routes";
 import agenciesRoutes from "./routes/agencies.routes";
 import { env } from "./config/env";
+import { logger, morganStream } from "./config/logger";
 import path from "path";
 import cors from "cors";
 import helmet from "helmet";
@@ -25,16 +27,19 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
+// HTTP request logging
+app.use(morgan("combined", { stream: morganStream }));
+
 const allowedOrigins = [env.FRONTEND_URL];
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // mobile RN/server-to-server
+      if (!origin) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error("CORS: origin não permitido"));
     },
-    credentials: true, // só se usar cookies na web
+    credentials: true,
   })
 );
 
@@ -46,15 +51,15 @@ if (env.NODE_ENV === "production") {
     standardHeaders: true,
     legacyHeaders: false,
     message: "Muitas requisições deste IP, tente novamente em 15 minutos.",
-    // Desabilitar validação de trust proxy em produção quando sabemos que estamos atrás de um proxy confiável (Railway)
     validate: {
       trustProxy: false,
       xForwardedForHeader: false,
     },
   });
   app.use(limiter);
+  logger.info("Rate limiting enabled");
 } else {
-  console.log("⚠️  Rate limiting DISABLED (development mode)");
+  logger.warn("Rate limiting DISABLED (development mode)");
 }
 
 app.use(
@@ -82,11 +87,10 @@ app.get("/api/health", async (_req, res) => {
 // Rota para página de reset de senha
 app.get("/reset-password", (req, res) => {
   const filePath = path.join(process.cwd(), "public", "reset-password.html");
-  console.log("📄 Serving reset-password from:", filePath);
 
   res.sendFile(filePath, (err) => {
     if (err) {
-      console.error("❌ Error serving reset-password.html:", err);
+      logger.error(`Error serving reset-password.html: ${err.message}`);
       res.status(404).send("Reset password page not found");
     }
   });
@@ -94,7 +98,7 @@ app.get("/reset-password", (req, res) => {
 
 // Servir arquivos estáticos - DEPOIS das rotas específicas
 const publicPath = path.join(process.cwd(), "public");
-console.log(`📁 Serving static files from: ${publicPath}`);
+logger.info(`Serving static files from: ${publicPath}`);
 app.use(express.static(publicPath));
 
 // Handlers de erro devem ser os últimos
@@ -102,20 +106,20 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📍 Environment: ${env.NODE_ENV}`);
+  logger.info(`Server running on http://localhost:${PORT}`);
+  logger.info(`Environment: ${env.NODE_ENV}`);
 });
 
 async function gracefulShutdown(reason?: unknown) {
-  console.error("Shutting down gracefully...", reason);
+  logger.error("Shutting down gracefully...", { reason });
   server.close(async () => {
     try {
       await prisma.$disconnect();
+      logger.info("Database connection closed");
     } finally {
       process.exit(1);
     }
   });
-  // Fallback: se não fechar em 10s, força saída
   setTimeout(() => process.exit(1), 10_000).unref();
 }
 
