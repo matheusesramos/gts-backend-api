@@ -1,13 +1,8 @@
 // src/controllers/bookings.controller.ts
-// 🔄 ALTERAÇÕES:
-// - Adicionado Winston logger
-// - Removidos console.logs verbosos de debug
-// - Logs mais estruturados com userId e bookingId
-// - Trocado email para Resend
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { uploadBookingPhoto } from "../services/storage.service";
-import { resendService } from "../services/resend.service"; // 🔄 ALTERADO - usa Resend
+import { bookingEmailService } from "../services/booking-email.service";
 import { logger } from "../config/logger";
 import { prisma } from "../lib/prisma";
 
@@ -58,8 +53,6 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ message: "Items are required." });
   }
 
-  // 🔄 REMOVIDO - logs verbosos de debug (items.length, executionDate, etc)
-
   try {
     // Criar booking
     const booking = await prisma.booking.create({
@@ -83,7 +76,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
     // Upload de fotos para Supabase
     if (files && files.length > 0) {
-      logger.info(`Uploading ${files.length} photos for booking ${booking.id}`); // 🔄 ALTERADO
+      logger.info(`Uploading ${files.length} photos for booking ${booking.id}`);
 
       const uploadPromises = files.map((file) =>
         uploadBookingPhoto(file, booking.id)
@@ -104,7 +97,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
       logger.debug(
         `${files.length} photos uploaded successfully for booking ${booking.id}`
-      ); // 🔄 ALTERADO
+      );
     }
 
     // Buscar booking completo
@@ -131,12 +124,11 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    logger.info(`Booking created: ${booking.id} for user ${userId}`); // 🔄 ALTERADO
+    logger.info(`Booking created: ${booking.id} for user ${userId}`);
 
     // Enviar email de notificação
     try {
-      await resendService.sendBookingNotification({
-        // 🔄 ALTERADO - usa Resend
+      await bookingEmailService.sendNewBookingNotification({
         bookingId: booking.id,
         customerName: completeBooking!.user.name,
         customerEmail: completeBooking!.user.email,
@@ -150,6 +142,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
           category: item.service.category.name,
           notes: item.notes,
         })),
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         createdAt: booking.createdAt.toISOString(),
       });
     } catch (emailError) {
@@ -164,7 +157,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
       booking: completeBooking,
     });
   } catch (error) {
-    logger.error(`Error creating booking: ${error}`); // 🔄 ALTERADO
+    logger.error(`Error creating booking: ${error}`);
     return res.status(500).json({ message: "Error creating booking." });
   }
 };
@@ -196,7 +189,7 @@ export const getUserBookings = async (req: AuthRequest, res: Response) => {
 
     return res.status(200).json({ bookings });
   } catch (error) {
-    logger.error(`Error fetching bookings for user ${userId}: ${error}`); // 🔄 ALTERADO
+    logger.error(`Error fetching bookings for user ${userId}: ${error}`);
     return res.status(500).json({ message: "Error fetching bookings." });
   }
 };
@@ -235,7 +228,7 @@ export const getBookingById = async (req: AuthRequest, res: Response) => {
 
     return res.status(200).json({ booking });
   } catch (error) {
-    logger.error(`Error fetching booking ${id}: ${error}`); // 🔄 ALTERADO
+    logger.error(`Error fetching booking ${id}: ${error}`);
     return res.status(500).json({ message: "Error fetching booking." });
   }
 };

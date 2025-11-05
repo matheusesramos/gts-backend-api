@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
-import { resendService } from "../services/resend.service"; // 🔄 ALTERADO - usa Resend
+import { emailService } from "../services/email.service"; // 🔄 ALTERADO - usa Resend
 import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
 
@@ -64,7 +64,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
 
     // Enviar email
-    await resendService.sendPasswordResetEmail(user.email, user.name, token); // 🔄 ALTERADO
+    await emailService.sendPasswordResetEmail(user.email, user.name, token); // 🔄 ALTERADO
 
     return res.status(200).json({
       message: "Se o email existir, você receberá instruções para recuperação.",
