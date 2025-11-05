@@ -1,4 +1,7 @@
-FROM node:20-alpine
+FROM node:22-alpine
+
+# Dependências do sistema para Prisma
+RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
@@ -13,9 +16,12 @@ RUN npx prisma generate
 # Copiar código
 COPY . .
 
-# Porta do App Platform
-ENV PORT=8080
-EXPOSE 8080
+# Criar pasta public
+RUN mkdir -p public
+
+# Porta
+ENV PORT=3001
+EXPOSE 3001
 
 # Comando de inicialização
 CMD ["npm", "start"]
