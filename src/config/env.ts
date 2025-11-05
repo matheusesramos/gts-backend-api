@@ -17,6 +17,7 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().email(),
   FRONTEND_URL: z.string().min(1),
   API_BASE_URL: z.string().min(1),
+  RESEND_API_KEY: z.string().min(1),
   RESET_TOKEN_EXPIRATION: z.coerce.number().default(3600),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_KEY: z.string().min(1),
