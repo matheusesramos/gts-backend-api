@@ -11,6 +11,11 @@ export const resendService = {
     const resetUrl = `${env.API_BASE_URL}/reset-password?token=${token}`;
 
     try {
+      console.log("🔍 Tentando enviar email de recuperação...");
+      console.log("Para:", email);
+      console.log("De:", `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`);
+      console.log("Reset URL:", resetUrl);
+
       await resend.emails.send({
         from: `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`,
         to: email,
@@ -129,8 +134,11 @@ export const resendService = {
         `,
       });
 
+      console.log("✅ Email de recuperação enviado com sucesso!");
       logger.info(`Password reset email sent via Resend to: ${email}`);
     } catch (error) {
+      // 🔍 ADICIONE AQUI - Melhorar o erro
+      console.error("❌ Erro ao enviar email de recuperação:", error);
       logger.error(`Failed to send password reset email via Resend: ${error}`);
       throw new Error("Failed to send email");
     }
@@ -171,6 +179,11 @@ export const resendService = {
     };
 
     try {
+      console.log("🔍 Tentando enviar notificação de booking...");
+      console.log("Para:", env.EMAIL_FROM);
+      console.log("De:", `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`);
+      console.log("Booking ID:", data.bookingId);
+
       await resend.emails.send({
         from: `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`,
         to: env.EMAIL_FROM,
@@ -395,8 +408,11 @@ export const resendService = {
         `,
       });
 
+      console.log("✅ Notificação de booking enviada com sucesso!");
       logger.info(`Booking notification sent via Resend for ${data.bookingId}`);
     } catch (error) {
+      // 🔍 ADICIONE AQUI
+      console.error("❌ Erro ao enviar notificação de booking:", error);
       logger.error(`Failed to send booking email via Resend: ${error}`);
       throw error;
     }
