@@ -38,12 +38,15 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, cb) => {
-      // 🆕 ADICIONE - Permitir requisições sem origin (mesmo domínio)
+      console.log("🔍 Origin recebida:", origin); // 👈 ADICIONE ESTE LOG
+      console.log("🔍 Allowed origins:", allowedOrigins); // 👈 E ESTE
+
+      // Permitir requisições sem origin (mesmo domínio)
       if (!origin) return cb(null, true);
 
       if (allowedOrigins.includes(origin)) return cb(null, true);
 
-      console.log("❌ CORS bloqueou origin:", origin); // 🔍 Debug
+      console.log("❌ CORS bloqueou origin:", origin);
       return cb(new Error("CORS: origin não permitido"));
     },
     credentials: true,
