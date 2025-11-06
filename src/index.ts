@@ -30,13 +30,20 @@ app.use(cookieParser());
 // HTTP request logging
 app.use(morgan("combined", { stream: morganStream }));
 
-const allowedOrigins = [env.FRONTEND_URL];
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  env.API_BASE_URL, // 🆕 ADICIONE - permite a própria API
+];
 
 app.use(
   cors({
     origin: (origin, cb) => {
+      // 🆕 ADICIONE - Permitir requisições sem origin (mesmo domínio)
       if (!origin) return cb(null, true);
+
       if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      console.log("❌ CORS bloqueou origin:", origin); // 🔍 Debug
       return cb(new Error("CORS: origin não permitido"));
     },
     credentials: true,
