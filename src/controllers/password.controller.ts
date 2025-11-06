@@ -1,23 +1,22 @@
-// src/controllers/password.controller.ts
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { z } from "zod";
+import {
+  forgotPasswordSchema,
+  verifyCodeSchema,
+  resetPasswordWithCodeSchema,
+} from "../schemas/user.schemas";
 import { resendService } from "../services/resend.service";
 import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
 
-// Schema de validação
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Email inválido"),
-});
+// Gerar código de 4 dígitos
+function generateCode(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token é obrigatório"),
-  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
-});
-
-export const forgotPassword = async (req: Request, res: Response) => {
+// 1️⃣ SOLICITAR CÓDIGO (substitui forgot-password)
+export const requestPasswordReset = async (req: Request, res: Response) => {
   try {
     const validation = forgotPasswordSchema.safeParse(req.body);
     if (!validation.success) {
@@ -26,116 +25,153 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const { email } = validation.data;
 
-    // Buscar usuário
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Por segurança, sempre retorna sucesso mesmo se o email não existir
+    // Sempre retorna sucesso (segurança)
     if (!user) {
       return res.status(200).json({
-        message:
-          "Se o email existir, você receberá instruções para recuperação.",
+        message: "Se o email existir, você receberá um código de verificação.",
       });
     }
 
-    // Gerar token único
-    const token = crypto.randomBytes(32).toString("hex");
+    // Gerar código
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
 
-    // Calcular expiração
-    const expiresAt = new Date(Date.now() + env.RESET_TOKEN_EXPIRATION * 1000);
-
-    // Invalidar tokens anteriores
+    // Invalidar códigos anteriores
     await prisma.resetToken.updateMany({
       where: {
         userId: user.id,
         used: false,
       },
-      data: {
-        used: true,
-      },
+      data: { used: true },
     });
 
-    // Criar novo token
+    // Criar novo código
     await prisma.resetToken.create({
       data: {
-        token,
+        code,
         userId: user.id,
         expiresAt,
       },
     });
 
     // Enviar email
-    await resendService.sendPasswordResetEmail(user.email, user.name, token); // 🔄 ALTERADO
+    await resendService.sendPasswordResetCode(user.email, user.name, code);
 
     return res.status(200).json({
-      message: "Se o email existir, você receberá instruções para recuperação.",
+      message: "Se o email existir, você receberá um código de verificação.",
     });
   } catch (error) {
-    console.error("Erro em forgotPassword:", error);
+    console.error("Erro em requestPasswordReset:", error);
     return res.status(500).json({ message: "Erro ao processar solicitação." });
   }
 };
 
-export const resetPassword = async (req: Request, res: Response) => {
+// 2️⃣ VERIFICAR CÓDIGO
+export const verifyResetCode = async (req: Request, res: Response) => {
   try {
-    console.log("🔍 Recebendo requisição de reset password");
-    console.log("Body:", req.body);
-    console.log("Token:", req.body.token);
-
-    const validation = resetPasswordSchema.safeParse(req.body);
+    const validation = verifyCodeSchema.safeParse(req.body);
     if (!validation.success) {
-      console.log("❌ Validação falhou:", validation.error.issues);
       return res.status(400).json({ errors: validation.error.issues });
     }
 
-    const { token, password } = validation.data;
-    console.log("✅ Validação OK, buscando token no banco...");
+    const { email, code } = validation.data;
 
-    const resetToken = await prisma.resetToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
-
-    console.log("Token encontrado:", resetToken ? "Sim" : "Não");
-
-    if (!resetToken) {
-      return res.status(400).json({ message: "Token inválido." });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: "Código inválido." });
     }
 
-    if (resetToken.used) {
-      return res.status(400).json({ message: "Token já foi utilizado." });
+    const resetToken = await prisma.resetToken.findFirst({
+      where: {
+        code,
+        userId: user.id,
+        used: false,
+      },
+    });
+
+    if (!resetToken) {
+      return res.status(400).json({ message: "Código inválido." });
     }
 
     if (resetToken.expiresAt < new Date()) {
-      return res.status(400).json({ message: "Token expirado." });
+      return res.status(400).json({ message: "Código expirado." });
     }
 
-    console.log("✅ Token válido, atualizando senha...");
+    // Marcar como verificado
+    await prisma.resetToken.update({
+      where: { id: resetToken.id },
+      data: { verified: true },
+    });
 
+    return res.status(200).json({
+      message: "Código verificado com sucesso!",
+    });
+  } catch (error) {
+    console.error("Erro em verifyResetCode:", error);
+    return res.status(500).json({ message: "Erro ao verificar código." });
+  }
+};
+
+// 3️⃣ RESETAR SENHA (só funciona se código foi verificado)
+export const resetPasswordWithCode = async (req: Request, res: Response) => {
+  try {
+    const validation = resetPasswordWithCodeSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ errors: validation.error.issues });
+    }
+
+    const { email, code, password } = validation.data;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: "Código inválido." });
+    }
+
+    const resetToken = await prisma.resetToken.findFirst({
+      where: {
+        code,
+        userId: user.id,
+        used: false,
+        verified: true, // 👈 Deve ter sido verificado
+      },
+    });
+
+    if (!resetToken) {
+      return res
+        .status(400)
+        .json({ message: "Código inválido ou não verificado." });
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Código expirado." });
+    }
+
+    // Atualizar senha
     const hashedPassword = await bcrypt.hash(password, 10);
     await prisma.user.update({
-      where: { id: resetToken.userId },
+      where: { id: user.id },
       data: { password: hashedPassword },
     });
 
-    console.log("✅ Senha atualizada, marcando token como usado...");
-
+    // Marcar código como usado
     await prisma.resetToken.update({
       where: { id: resetToken.id },
       data: { used: true },
     });
 
+    // Revogar todos refresh tokens
     await prisma.refreshToken.updateMany({
-      where: { userId: resetToken.userId },
+      where: { userId: user.id },
       data: { revoked: true },
     });
-
-    console.log("✅ Reset concluído com sucesso!");
 
     return res.status(200).json({
       message: "Senha redefinida com sucesso!",
     });
   } catch (error) {
-    console.error("❌ Erro em resetPassword:", error); // 🔍 Este vai mostrar o erro real
+    console.error("Erro em resetPasswordWithCode:", error);
     return res.status(500).json({ message: "Erro ao redefinir senha." });
   }
 };

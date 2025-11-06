@@ -96,18 +96,6 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
-// Rota para página de reset de senha
-app.get("/reset-password", (req, res) => {
-  const filePath = path.join(process.cwd(), "public", "reset-password.html");
-
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      logger.error(`Error serving reset-password.html: ${err.message}`);
-      res.status(404).send("Reset password page not found");
-    }
-  });
-});
-
 // Servir arquivos estáticos - DEPOIS das rotas específicas
 const publicPath = path.join(process.cwd(), "public");
 logger.info(`Serving static files from: ${publicPath}`);

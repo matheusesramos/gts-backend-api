@@ -7,8 +7,9 @@ import {
   logout,
 } from "../controllers/auth.controller";
 import {
-  forgotPassword,
-  resetPassword,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPasswordWithCode,
 } from "../controllers/password.controller";
 import { getProfile, updateProfile } from "../controllers/profile.controller";
 import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
@@ -24,8 +25,9 @@ router.post("/refresh_token", refreshToken);
 router.post("/logout", logout);
 
 // Recuperação de senha
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/request-password-reset", requestPasswordReset); // Solicitar código
+router.post("/verify-reset-code", verifyResetCode); // Verificar código
+router.post("/reset-password", resetPasswordWithCode); // Resetar senha
 
 // --- Rotas Protegidas ---
 // Perfil do usuário

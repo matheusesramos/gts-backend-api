@@ -34,3 +34,18 @@ export const updateProfileSchema = z.object({
   address: z.string().optional(),
   language: z.enum(["EN_GB", "PT_BR"]).optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Email inválido"),
+});
+
+export const verifyCodeSchema = z.object({
+  email: z.string().email("Email inválido"),
+  code: z.string().length(4, "Código deve ter 4 dígitos"),
+});
+
+export const resetPasswordWithCodeSchema = z.object({
+  email: z.string().email("Email inválido"),
+  code: z.string().length(4, "Código deve ter 4 dígitos"),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+});
