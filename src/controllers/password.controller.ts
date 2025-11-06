@@ -77,17 +77,25 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
+    console.log("🔍 Recebendo requisição de reset password");
+    console.log("Body:", req.body);
+    console.log("Token:", req.body.token);
+
     const validation = resetPasswordSchema.safeParse(req.body);
     if (!validation.success) {
+      console.log("❌ Validação falhou:", validation.error.issues);
       return res.status(400).json({ errors: validation.error.issues });
     }
 
     const { token, password } = validation.data;
+    console.log("✅ Validação OK, buscando token no banco...");
 
     const resetToken = await prisma.resetToken.findUnique({
       where: { token },
       include: { user: true },
     });
+
+    console.log("Token encontrado:", resetToken ? "Sim" : "Não");
 
     if (!resetToken) {
       return res.status(400).json({ message: "Token inválido." });
@@ -101,11 +109,15 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Token expirado." });
     }
 
+    console.log("✅ Token válido, atualizando senha...");
+
     const hashedPassword = await bcrypt.hash(password, 10);
     await prisma.user.update({
       where: { id: resetToken.userId },
       data: { password: hashedPassword },
     });
+
+    console.log("✅ Senha atualizada, marcando token como usado...");
 
     await prisma.resetToken.update({
       where: { id: resetToken.id },
@@ -117,11 +129,13 @@ export const resetPassword = async (req: Request, res: Response) => {
       data: { revoked: true },
     });
 
+    console.log("✅ Reset concluído com sucesso!");
+
     return res.status(200).json({
       message: "Senha redefinida com sucesso!",
     });
   } catch (error) {
-    console.error("Erro em resetPassword:", error);
+    console.error("❌ Erro em resetPassword:", error); // 🔍 Este vai mostrar o erro real
     return res.status(500).json({ message: "Erro ao redefinir senha." });
   }
 };
