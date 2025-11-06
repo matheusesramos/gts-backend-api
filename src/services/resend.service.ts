@@ -12,7 +12,7 @@ export const resendService = {
 
     try {
       await resend.emails.send({
-        from: "Gentle Touch Star <contact@gentletouchstar.co.uk>",
+        from: `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`,
         to: email,
         subject: "🔐 Password Recovery",
         html: `
@@ -172,7 +172,7 @@ export const resendService = {
 
     try {
       await resend.emails.send({
-        from: "Gentle Touch Star <contact@gentletouchstar.co.uk>",
+        from: `Gentle Touch Cleaning Services <${env.EMAIL_FROM}>`,
         to: env.EMAIL_FROM,
         subject: `📅 New Booking Request`,
         html: `
