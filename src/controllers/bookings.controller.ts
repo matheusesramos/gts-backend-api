@@ -142,6 +142,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
           category: item.service.category.name,
           notes: item.notes,
         })),
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         createdAt: booking.createdAt.toISOString(),
       });
     } catch (emailError) {

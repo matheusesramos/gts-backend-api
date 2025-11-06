@@ -157,6 +157,7 @@ export const resendService = {
       category: string;
       notes?: string | null;
     }>;
+    photoUrls?: string[];
     bookingId: string;
     createdAt: string;
   }) {
@@ -183,11 +184,42 @@ export const resendService = {
       console.log("Para:", "dev.gentletouchstar@gmail.com");
       console.log("De:", `Gentle Touch Star <${env.EMAIL_FROM}>`);
       console.log("Booking ID:", data.bookingId);
+      console.log("Fotos:", data.photoUrls?.length || 0);
+
+      // 🆕 Preparar anexos se houver fotos
+      let attachments: any[] = [];
+
+      if (data.photoUrls && data.photoUrls.length > 0) {
+        console.log(`📸 Baixando ${data.photoUrls.length} fotos...`);
+
+        for (let i = 0; i < data.photoUrls.length; i++) {
+          try {
+            const response = await fetch(data.photoUrls[i]);
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            const extension =
+              data.photoUrls[i].split(".").pop()?.split("?")[0] || "jpg";
+
+            attachments.push({
+              filename: `photo-${i + 1}.${extension}`,
+              content: buffer,
+            });
+
+            console.log(`✅ Foto ${i + 1} baixada`);
+          } catch (error) {
+            console.error(`❌ Erro ao baixar foto ${i + 1}:`, error);
+          }
+        }
+
+        console.log(`📎 ${attachments.length} anexos prontos`);
+      }
 
       await resend.emails.send({
         from: `Gentle Touch Star <${env.EMAIL_FROM}>`,
         to: "dev.gentletouchstar@gmail.com",
         subject: `📅 New Booking Request`,
+        attachments: attachments.length > 0 ? attachments : undefined, // 👈 ADICIONE
         html: `
           <!DOCTYPE html>
           <html>
@@ -364,6 +396,22 @@ export const resendService = {
                         </td>
                       </tr>
                       `
+                          : ""
+                      }
+
+                      ${
+                        data.photoUrls && data.photoUrls.length > 0
+                          ? `
+                            <tr>
+                              <td style="padding: 0 40px 32px 40px;">
+                                <div style="background-color: #fffbeb; padding: 20px; border-radius: 4px; border-left: 3px solid #f59e0b;">
+                                  <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.6;">
+                                    <strong>📎 ${data.photoUrls.length} photo(s) attached</strong> — Please check the attachments for visual reference.
+                                  </p>
+                                </div>
+                              </td>
+                            </tr>
+                          `
                           : ""
                       }
                       
