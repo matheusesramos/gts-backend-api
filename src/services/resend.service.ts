@@ -180,7 +180,7 @@ export const resendService = {
 
     try {
       console.log("🔍 Tentando enviar notificação de booking...");
-      console.log("Para:", env.EMAIL_FROM);
+      console.log("Para:", "dev.gentletouchstar@gmail.com");
       console.log("De:", `Gentle Touch Star <${env.EMAIL_FROM}>`);
       console.log("Booking ID:", data.bookingId);
 

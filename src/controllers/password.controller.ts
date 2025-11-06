@@ -1,6 +1,6 @@
+// src/controllers/password.controller.ts
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import {
   forgotPasswordSchema,
   verifyCodeSchema,
