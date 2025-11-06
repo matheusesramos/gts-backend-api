@@ -38,14 +38,15 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Sem origin = mesma origem (HTML servido pelo backend)
-      if (!origin) return cb(null, true);
+      // Permitir: sem origin, null, ou railway.app
+      if (!origin || origin === "null" || origin.includes("railway.app")) {
+        return cb(null, true);
+      }
 
-      // Qualquer subdomínio do Railway
-      if (origin.includes("railway.app")) return cb(null, true);
-
-      // Frontend configurado
-      if (origin === env.FRONTEND_URL) return cb(null, true);
+      // Permitir frontend configurado
+      if (origin === env.FRONTEND_URL) {
+        return cb(null, true);
+      }
 
       console.log("❌ CORS bloqueou origin:", origin);
       return cb(new Error("CORS: origin não permitido"));
