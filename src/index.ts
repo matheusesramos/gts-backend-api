@@ -17,7 +17,7 @@ import { notFoundHandler, errorHandler } from "./middlewares/error.middleware";
 import { prisma } from "./lib/prisma";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Confiar no proxy (necessário para Railway/proxies reversos)
 // Railway usa 1 proxy reverso, então configuramos para confiar apenas no primeiro proxy

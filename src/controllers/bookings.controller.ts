@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { uploadBookingPhoto } from "../services/storage.service";
-import { bookingEmailService } from "../services/booking-email.service";
+import { resendService } from "../services/resend.service";
 import { logger } from "../config/logger";
 import { prisma } from "../lib/prisma";
 
@@ -128,7 +128,7 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
 
     // Enviar email de notificação
     try {
-      await bookingEmailService.sendNewBookingNotification({
+      await resendService.sendBookingNotification({
         bookingId: booking.id,
         customerName: completeBooking!.user.name,
         customerEmail: completeBooking!.user.email,
@@ -142,11 +142,9 @@ export const createBooking = async (req: AuthRequest, res: Response) => {
           category: item.service.category.name,
           notes: item.notes,
         })),
-        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         createdAt: booking.createdAt.toISOString(),
       });
     } catch (emailError) {
-      // Não falha o booking se o email não enviar
       logger.warn(
         `Failed to send booking email for ${booking.id}: ${emailError}`
       );
