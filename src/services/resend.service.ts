@@ -186,7 +186,7 @@ export const resendService = {
 
       await resend.emails.send({
         from: `Gentle Touch Star <${env.EMAIL_FROM}>`,
-        to: env.EMAIL_FROM,
+        to: "dev.gentletouchstar@gmail.com",
         subject: `📅 New Booking Request`,
         html: `
           <!DOCTYPE html>
