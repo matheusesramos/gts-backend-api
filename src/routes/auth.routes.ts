@@ -11,6 +11,7 @@ import {
   verifyResetCode,
   resetPasswordWithCode,
 } from "../controllers/password.controller";
+import { deleteAccount } from "../controllers/delete-account.controller";
 import { getProfile, updateProfile } from "../controllers/profile.controller";
 import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
 import { authorizeRoles } from "../middlewares/authorize-roles.middleware";
@@ -33,6 +34,7 @@ router.post("/reset-password", resetPasswordWithCode); // Resetar senha
 // Perfil do usuário
 router.get("/profile", authMiddleware, getProfile);
 router.put("/profile", authMiddleware, updateProfile);
+router.delete("/account", authMiddleware, deleteAccount);
 
 // Dashboard (apenas EMPLOYEE e ADMIN)
 router.get(

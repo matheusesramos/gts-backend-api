@@ -44,6 +44,8 @@ model User {
   address       String?
   language      Language       @default(EN_GB)
   role          Role           @default(CUSTOMER)
+  isActive      Boolean        @default(true)
+  deletedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]

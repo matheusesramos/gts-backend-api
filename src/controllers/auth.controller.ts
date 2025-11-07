@@ -74,6 +74,12 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Credenciais inválidas." });
     }
 
+    if (!user.isActive) {
+      return res.status(401).json({
+        message: "Conta inativa. Entre em contato com o suporte.",
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Credenciais inválidas." });
